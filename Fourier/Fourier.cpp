@@ -132,7 +132,7 @@ int main(){
 		std::cout << "Fourier has finished his work. Writing on disk :)\n";
 		DeleteFile((Filename + L"." + std::to_wstring(NotesPerSecond) + L".mid").c_str());
 
-		out = std::ofstream(Filename + L".mid", std::ios::binary | std::ios::out);
+		out = std::ofstream((Filename + L"." + std::to_wstring(NotesPerSecond) + L".mid"), std::ios::binary | std::ios::out);
 		out.put('M'); out.put('T'); out.put('h'); out.put('d');
 		out.put(0); out.put(0); out.put(0); out.put(6);
 		out.put(0); out.put(1);
