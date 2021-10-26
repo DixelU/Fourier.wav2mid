@@ -93,8 +93,7 @@ int main() {
 
 		std::function<double(double)> mapper = [](double x) {return x; };
 		std::cout << "Disable velocity remapping (often enhances audio, but also might cause audio to drown in intense parts) (enter y/Y to disable): ";
-		char agreement;
-		std::cin >> agreement;
+		char agreement = std::getchar();
 		if (agreement != 'y' && agreement != 'Y')
 			mapper = [](double x) {return std::sqrt(x); };
 
