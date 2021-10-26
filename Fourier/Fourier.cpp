@@ -92,10 +92,10 @@ int main() {
 			NotesPerSecond = 64;
 
 		std::function<double(double)> mapper = [](double x) {return x; };
-		std::cout << "Enable velocity remapping (often enhances audio, but also might cause audio to drown in intense parts) (y?): ";
+		std::cout << "Disable velocity remapping (often enhances audio, but also might cause audio to drown in intense parts) (enter y/Y to disable): ";
 		char agreement;
 		std::cin >> agreement;
-		if (agreement == 'y' || agreement == 'Y')
+		if (agreement != 'y' && agreement != 'Y')
 			mapper = [](double x) {return std::sqrt(x); };
 
 		Output = new double[128];
