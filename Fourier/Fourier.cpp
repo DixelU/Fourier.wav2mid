@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include <iostream>
 #include <vector>
-#include <deque>
+#include <array>
 #include <iterator>
 #include <cmath>
 #include <fstream>
@@ -25,7 +25,7 @@ inline double GetDFTCoeficient(INT16* Samples, DWORD SampleAmount, double TicksP
 }
 inline void DFT(INT16* Samples, DWORD SampleAmount, std::vector<double>& Hertz, double*& Output, double SamplesPerSecond) {//hertz = ticks/second
 	for (int i = 0; i < Hertz.size(); i++) {
-		Output[i] = GetDFTCoeficient(Samples, SampleAmount, Hertz[i] / SamplesPerSecond) * (i / 64.);
+		Output[i] = GetDFTCoeficient(Samples, SampleAmount, Hertz[i] / SamplesPerSecond);
 	}
 }
 
@@ -61,6 +61,10 @@ int main() {
 	std::vector<BYTE> Data;
 	std::vector<double> Hertz;
 	std::vector<BYTE> FinalTrack;
+
+	std::vector<std::array<double, 128>> Velocities;
+	double maxVelocity = -1;
+
 	double* Output;
 	INT16* Samples;
 	DWORD NotesPerSecond;
@@ -104,26 +108,41 @@ int main() {
 		do {
 			SampleArraySize = ISD.read(Samples, SampleArraySize);
 			DFT(Samples, SampleArraySize, Hertz, Output, NotesPerSecond);
+			
+			Velocities.emplace_back();
+			for (int i = 0; i < 128; ++i) {
+				Velocities.back()[i] = std::sqrt(Output[i]);
+				if (Velocities.back()[i] > maxVelocity)
+					maxVelocity = Velocities.back()[i];
+			}
+		} while (SampleArraySize);
+
+		for (const auto& singleTick : Velocities) {
 			First = 1;
 			for (int i = 0; i < 128; i++) {
-				T = (Output[i] < 0) ? 0 : (Output[i] > 127) ? 127 : Output[i];
-				if (!T)continue;
+				auto curVelocity = singleTick[i] * 127 / maxVelocity;
+				T = curVelocity;
+				if (!T)
+					continue;
 				FinalTrack.push_back(0);
 				FinalTrack.push_back(0x90 | (T >> 4));
 				FinalTrack.push_back(i);
 				FinalTrack.push_back(T);
 			}
 			for (int i = 0; i < 128; i++) {
-				T = (Output[i] < 0) ? 0 : (Output[i] > 127) ? 127 : Output[i];
-				if (!T)continue;
+				auto curVelocity = singleTick[i] * 127 / maxVelocity;
+				T = curVelocity;
+				if (!T)
+					continue;
 				FinalTrack.push_back(First);
-				FinalTrack.push_back(0x80 | (T >> 4));// *(FinalTrack.rend() + 514)&0xF
+				FinalTrack.push_back(0x80 | (T >> 4));
 				FinalTrack.push_back(i);
 				FinalTrack.push_back(0x40);
-				if (First)First = 0;
+				if (First)
+					First = 0;
 			}
-		} while (SampleArraySize);
-		FinalTrack.push_back(0);
+		}
+		FinalTrack.push_back(1);
 		FinalTrack.push_back(0xFF);
 		FinalTrack.push_back(0x2F);
 		FinalTrack.push_back(0);
