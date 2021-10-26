@@ -91,14 +91,15 @@ int main() {
 		if (NotesPerSecond < 1)
 			NotesPerSecond = 64;
 
-		const int result = MessageBox(NULL, L"Disable velocity remapping? It often enhances audio, but also might cause audio to drown out at intense parts.", L"Disable velocity remapping", MB_YESNOCANCEL);
+		const int result = MessageBox(NULL, L"Enable velocity remapping? It often enhances audio, but also might cause audio to drown out at intense parts.", L"Disable velocity remapping", MB_YESNOCANCEL);
 		std::wstring FileSuffixes;
 
-		std::function<double(double)> mapper =  [](double x) {return std::sqrt(x); };
+		std::function<double(double)> mapper = [](double x) {return x; };
 		if(result == IDYES){
-			mapper = [](double x) {return x; };
-			FileSuffixes += L"r"; // raw velocity
+			mapper = [](double x) {return std::sqrt(x); };
 		}
+		else
+			FileSuffixes += L"r"; // raw velocity
 
 		Output = new double[128];
 		for (int i = 0; i < 128; i++)
