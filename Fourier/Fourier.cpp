@@ -91,11 +91,14 @@ int main() {
 		if (NotesPerSecond < 1)
 			NotesPerSecond = 64;
 
-		std::function<double(double)> mapper = [](double x) {return x; };
-		std::cout << "Disable velocity remapping (often enhances audio, but also might cause audio to drown in intense parts) (enter y/Y to disable): ";
-		char agreement = std::getchar();
-		if (agreement != 'y' && agreement != 'Y')
-			mapper = [](double x) {return std::sqrt(x); };
+		const int result = MessageBox(NULL, L"Disable velocity remapping? It often enhances audio, but also might cause audio to drown out at intense parts.", L"Disable velocity remapping", MB_YESNOCANCEL);
+		std::wstring FileSuffixes;
+
+		std::function<double(double)> mapper =  [](double x) {return std::sqrt(x); };
+		if(result == IDYES){
+			mapper = [](double x) {return x; };
+			FileSuffixes += L"r"; // raw velocity
+		}
 
 		Output = new double[128];
 		for (int i = 0; i < 128; i++)
@@ -155,10 +158,10 @@ int main() {
 		FinalTrack.push_back(0x2F);
 		FinalTrack.push_back(0);
 
-		std::cout << "Fourier has finished his work. Writing on disk :)\n";
-		DeleteFile((Filename + L"." + std::to_wstring(NotesPerSecond) + L".mid").c_str());
+		std::cout << "Writing on disk :)\n";
+		DeleteFile((Filename + L"." + std::to_wstring(NotesPerSecond) + FileSuffixes + L".mid").c_str());
 
-		out = std::ofstream((Filename + L"." + std::to_wstring(NotesPerSecond) + L".mid"), std::ios::binary | std::ios::out);
+		out = std::ofstream((Filename + L"." + std::to_wstring(NotesPerSecond) + FileSuffixes + L".mid"), std::ios::binary | std::ios::out);
 		out.put('M'); out.put('T'); out.put('h'); out.put('d');
 		out.put(0); out.put(0); out.put(0); out.put(6);
 		out.put(0); out.put(1);
