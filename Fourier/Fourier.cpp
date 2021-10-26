@@ -6,6 +6,7 @@
 #include <cmath>
 #include <fstream>
 #include <complex>
+#include <functional>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
@@ -87,7 +88,15 @@ int main() {
 	if (ISD.openFromMemory(Data.data(), Data.size())) {
 		std::cout << "Type in amount of ticks per second in the output midi.\nIf you don't understand what this means, type in 0. Default value will be assigned\nType in... ";
 		std::cin >> NotesPerSecond;
-		if (NotesPerSecond < 1)NotesPerSecond = 64;
+		if (NotesPerSecond < 1)
+			NotesPerSecond = 64;
+
+		std::function<double(double)> mapper = [](double x) {return x; };
+		std::cout << "Enable velocity remapping (often enhances audio, but also might cause audio to drown in intense parts) (y?): ";
+		char agreement;
+		std::cin >> agreement;
+		if (agreement == 'y' || agreement == 'Y')
+			mapper = [](double x) {return std::sqrt(x); };
 
 		Output = new double[128];
 		for (int i = 0; i < 128; i++)
@@ -95,7 +104,7 @@ int main() {
 		SampleRate = ISD.getSampleRate() * ISD.getChannelCount();
 		Samples = new INT16[(SampleArraySize = SampleRate / NotesPerSecond)];
 		//TEMPO = 60000000.;
-		std::cout << "Things are prepaired\n";
+		std::cout << "Started processing\n";
 
 		FinalTrack.push_back(0);
 		FinalTrack.push_back(0xFF);
@@ -111,7 +120,7 @@ int main() {
 			
 			Velocities.emplace_back();
 			for (int i = 0; i < 128; ++i) {
-				Velocities.back()[i] = std::sqrt(Output[i]);
+				Velocities.back()[i] = mapper(Output[i]);
 				if (Velocities.back()[i] > maxVelocity)
 					maxVelocity = Velocities.back()[i];
 			}
