@@ -122,7 +122,7 @@ int main() {
 			
 			Velocities.emplace_back();
 			for (int i = 0; i < 128; ++i) {
-				Velocities.back()[i] = mapper(Output[i]);
+				Velocities.back()[i] = Output[i];
 				if (Velocities.back()[i] > maxVelocity)
 					maxVelocity = Velocities.back()[i];
 			}
@@ -131,7 +131,7 @@ int main() {
 		for (const auto& singleTick : Velocities) {
 			First = 1;
 			for (int i = 0; i < 128; i++) {
-				auto curVelocity = singleTick[i] * 127 / maxVelocity;
+				auto curVelocity = mapper(singleTick[i] / maxVelocity) * 127;
 				T = curVelocity;
 				if (!T)
 					continue;
@@ -141,7 +141,7 @@ int main() {
 				FinalTrack.push_back(T);
 			}
 			for (int i = 0; i < 128; i++) {
-				auto curVelocity = singleTick[i] * 127 / maxVelocity;
+				auto curVelocity = mapper(singleTick[i] / maxVelocity) * 127;
 				T = curVelocity;
 				if (!T)
 					continue;
