@@ -7,11 +7,21 @@
 #include <fstream>
 #include <complex>
 #include <functional>
-#include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
 #include <Windows.h>
+
+#include "bbb_ffio.h"
 #define PI 3.141592653589793238462643383279502884197169399375105820974944592
+
+
+constexpr int keywidth = 256;
+constexpr int lastkey = keywidth - 1;
+
+inline char velocityConversion(char value) {
+	value /= 15;
+	return value + (value >= 10);
+}
 
 inline double KeyToFreq(double Key) {
 	return 440. * std::pow(2, (Key - 69.) / 12.);
@@ -57,13 +67,14 @@ int main() {
 		Filename.push_back(szFile[i]);
 	}
 
-	std::ifstream in(Filename, std::ios::binary | std::ios::in);
+	//std::ifstream in(Filename, std::ios::binary | std::ios::in);
+	bbb_ffr in(Filename.c_str());
 	std::ofstream out;
 	std::vector<BYTE> Data;
 	std::vector<double> Hertz;
 	std::vector<BYTE> FinalTrack;
 
-	std::vector<std::array<double, 128>> Velocities;
+	std::vector<std::array<double, keywidth>> Velocities;
 	double maxVelocity = -1;
 
 	double* Output;
@@ -75,14 +86,11 @@ int main() {
 	size_t filesize, SampleArraySize;
 	sf::InputSoundFile ISD;
 
-	in.seekg(0, std::ios::end);
 	filesize = in.tellg();
-	in.seekg(0, std::ios::beg);
 
 	Data.reserve(filesize + 5);
-	while (in.good() && !in.eof()) {
+	while (in.good() && !in.eof())
 		Data.push_back(in.get());
-	}
 	in.close();
 
 	if (ISD.openFromMemory(Data.data(), Data.size())) {
@@ -101,12 +109,11 @@ int main() {
 		else
 			FileSuffixes += L"r"; // raw velocity
 
-		Output = new double[128];
-		for (int i = 0; i < 128; i++)
+		Output = new double[keywidth];
+		for (int i = 0; i < keywidth; i++)
 			Hertz.push_back(KeyToFreq((float)i));
 		SampleRate = ISD.getSampleRate() * ISD.getChannelCount();
 		Samples = new INT16[(SampleArraySize = SampleRate / NotesPerSecond)];
-		//TEMPO = 60000000.;
 		std::cout << "Started processing\n";
 
 		FinalTrack.push_back(0);
@@ -117,37 +124,45 @@ int main() {
 		FinalTrack.push_back(0x42);
 		FinalTrack.push_back(0x40);//BPM = 60!
 
+		int check = 0;
 		do {
 			SampleArraySize = ISD.read(Samples, SampleArraySize);
 			DFT(Samples, SampleArraySize, Hertz, Output, NotesPerSecond);
 			
 			Velocities.emplace_back();
-			for (int i = 0; i < 128; ++i) {
+			for (int i = 0; i < keywidth; ++i) {
 				Velocities.back()[i] = Output[i];
 				if (Velocities.back()[i] > maxVelocity)
 					maxVelocity = Velocities.back()[i];
 			}
+			if (check / SampleRate > 60) {
+				check = 0;
+				std::cout << "Total seconds analysed: " << ISD.getTimeOffset().asSeconds() << std::endl;
+			}
+			++check;
 		} while (SampleArraySize);
+
+		std::cout << "Finished analysis... Exporting..." << std::endl;
 
 		for (const auto& singleTick : Velocities) {
 			First = 1;
-			for (int i = 0; i < 128; i++) {
+			for (int i = 0; i < keywidth; ++i) {
 				auto curVelocity = mapper(singleTick[i] / maxVelocity) * 127;
 				T = curVelocity;
 				if (!T)
 					continue;
 				FinalTrack.push_back(0);
-				FinalTrack.push_back(0x90 | (T >> 4));
+				FinalTrack.push_back(0x90 | velocityConversion(T));
 				FinalTrack.push_back(i);
 				FinalTrack.push_back(T);
 			}
-			for (int i = 0; i < 128; i++) {
+			for (int i = 0; i < keywidth; ++i) {
 				auto curVelocity = mapper(singleTick[i] / maxVelocity) * 127;
 				T = curVelocity;
 				if (!T)
 					continue;
 				FinalTrack.push_back(First);
-				FinalTrack.push_back(0x80 | (T >> 4));
+				FinalTrack.push_back(0x80 | velocityConversion(T));
 				FinalTrack.push_back(i);
 				FinalTrack.push_back(0x40);
 				if (First)
